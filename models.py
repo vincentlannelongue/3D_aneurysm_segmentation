@@ -6,6 +6,8 @@ from keras.layers import Reshape, Input, concatenate, BatchNormalization, Activa
 from keras.layers import Conv2D, Conv2DTranspose, MaxPool2D, UpSampling2D
 from keras.layers import Conv3D, Conv3DTranspose, MaxPooling3D, UpSampling3D
 
+from custom_loss import DiceLoss
+
 
 class Basic_3D_CNN:
     def __init__(self, in_shape):
@@ -201,12 +203,14 @@ class UNet:
         u5 = self._upsample_block(u4, f1, self.filters)
 
         # outputs
-        outputs = Conv3D(1, 1, padding="same", activation = "softmax")(u5)
+        outputs = Conv3D(1, 1, padding="same", activation = "relu")(u5)
 
         # unet model with Keras Functional API
         unet_model = Model(inputs, outputs, name="U-Net")
 
-        unet_model.compile(optimizer=Adam(learning_rate=self.lr), loss="mse")
+        unet_model.compile(optimizer=Adam(learning_rate=self.lr), 
+                           loss=DiceLoss(), #"binary_crossentropy",  #dice_coef_loss,
+                           metrics=[tf.keras.metrics.Accuracy(), tf.keras.metrics.BinaryIoU(name='IoU')]) #OneHotMeanIoU
         unet_model.summary()
         return unet_model
       
@@ -220,4 +224,4 @@ class UNet:
 
 
     def load_model(self, path):
-      self.autoencoder = load_model(path + '/my_unet')
+      self.model = load_model(path + '/my_unet')

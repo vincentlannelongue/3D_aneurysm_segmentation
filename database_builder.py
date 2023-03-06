@@ -2,9 +2,11 @@ import matplotlib.pyplot as plt
 import h5py
 import numpy as np
 import os
+
 from DataGen import DataGen
 
-path ="C:/Users/vince/dev/idsc/Anev/"
+
+path = os.getcwd()
 data_path = path + "/challenge_dataset"
 os.chdir(path)
 
@@ -22,13 +24,10 @@ for k in range(nb_files):
     h5 = h5py.File(filename,'r')
     label = h5['label'] 
     raw = h5['raw'] 
-    # imlabel = label[0,:,:]
-    # imraw = raw[0,:,:]
     raw_im = raw[:, :, :]
     lab_im = np.array([label[k,:,:] for k in range(64)])
 
     #let us build a data set with all concatenated images
-    
     im_data.append(raw_im)
     lab_data.append(lab_im)
 
@@ -41,30 +40,30 @@ print(lab_data.shape)
 print((nb_files))
 
 
-### Creating augmented dataset with DataGen 
+### CREATING AUGMENTED DATASET WITH DATAGEN
 
 data_gen = DataGen(init_im_dataset=im_data, init_lab_dataset=lab_data)
 
 im_cropped_data, lab_cropped_data = data_gen.create_dataset(
     batch_size = 10,
-    crop = [32, 96, 96],
-    mirror=True,
-    rotate=True,
-    # noise=True,
+    crop = [32, 90, 90],
+    vessel=False,
+    mirror=False,
+    rotate=False,
+    noise=False,
     normalize=True
     )
 
 print("number of files in new db: ", len(im_cropped_data))
 
-### Saving the dataset
+### SAVING
 
-save_path = path + "/cropped_dataset_32x96x96"
+save_path = path + "/rendu"
 
 if not os.path.exists(save_path):
     os.makedirs(save_path)
 
-np.save(os.path.join(save_path + '/cropped_augm_32x96x96_im_data.npy'), im_cropped_data)
-np.save(os.path.join(save_path + '/cropped_augm_32x96x96_lab_data.npy'), lab_cropped_data)
+np.save(os.path.join(save_path + '/original_im.npy'), im_cropped_data)
+np.save(os.path.join(save_path + '/original_lab.npy'), lab_cropped_data)
 
 print("augmented data saved")
-

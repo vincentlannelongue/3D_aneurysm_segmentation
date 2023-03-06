@@ -1,12 +1,18 @@
 import os
 import sys
-import matplotlib.pyplot as plt
 import h5py
 import numpy as np
+from skimage import filters
+import cv2
 
+
+
+# 2 idées à implémenter :
+# - thresholder les images pour ne garder que l'intérieur des vaisseaux sanguins
+# - dézoomer certaines images (quand on crop) pour avoir plus de petits anévrismes dans la dataset
 
 class DataGen():
-  ### marche bien mais explose la RAM ; le problème des classes datagen de keras est qu'elles ne gèrent pas bien les images 3D.
+
   def __init__(self, init_im_dataset : np.array, init_lab_dataset : np.array):
     self._init_im_dataset = init_im_dataset
     self._init_lab_dataset = init_lab_dataset
@@ -54,10 +60,21 @@ class DataGen():
     '''
     mirrored_dataset = np.flip(dataset, axis = mirror_axis)
     return mirrored_dataset
+  
+  def _vessels_threshold(self, dataset : np.array):
+    thresh_data = []
+    for im in dataset:
+      thresh_im = []
+      threshold = filters.threshold_otsu(im)        
+      ret, thresh_im = cv2.threshold(im, 0.8*threshold, 1, cv2.THRESH_BINARY)
+      thresh_data.append(thresh_im)
+    thresh_data = np.array(thresh_data)
+    return thresh_data
 
   def _process_dataset_batch(self, 
                              im_batch : np.array,
                              lab_batch : np.array,
+                             vessel : bool = False,
                              mirror : bool = False, 
                              rotate : bool = False, 
                              noise : bool = False,
@@ -67,6 +84,10 @@ class DataGen():
     '''
     Apply all of the desired transformations on a batch of images and their corresponding label.
     '''
+    # vessel : factor 1
+    if vessel :
+      vessel_im_batch = self._vessels_threshold(dataset=im_batch)
+      im_batch = np.concatenate((im_batch, vessel_im_batch), axis=0)
 
     # mirror : factor 8
     if mirror:
@@ -103,6 +124,7 @@ class DataGen():
   def create_dataset(self, 
                      batch_size : int = 2,
                      crop : int = 0,
+                     vessel : bool = False,
                      mirror : bool = False, 
                      rotate : bool = False, 
                      noise : bool = False,
@@ -129,6 +151,7 @@ class DataGen():
       augm_im_batch, augm_lab_batch = self._process_dataset_batch(
           im_batch=im_batch,
           lab_batch=lab_batch,
+          vessel = vessel,
           mirror=mirror,
           rotate=rotate,
           noise=noise,
@@ -143,6 +166,7 @@ class DataGen():
     augm_im_batch, augm_lab_batch = self._process_dataset_batch(
         im_batch=im_batch,
         lab_batch=lab_batch,
+        vessel=vessel,
         mirror=mirror,
         rotate=rotate,
         noise=noise, 
